@@ -27,7 +27,20 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            df_temp = pd.read_csv(file)
+            # Menggunakan sep=";" karena CSV baru menggunakan titik koma
+            df_temp = pd.read_csv(file, sep=";")
+            
+            # Jika dibaca dengan sep=";" hanya menghasilkan 1 kolom, coba baca dengan sep="," (untuk file lama)
+            if len(df_temp.columns) <= 1:
+                df_temp = pd.read_csv(file, sep=",")
+            
+            # Auto-rename nama kolom baru agar cocok dengan kode dashboard
+            rename_map = {
+                'samsat_asal_nama': 'nama_samsat',
+                'status_nomor_hp_valid': 'flag_nomor_hp_valid'
+            }
+            df_temp = df_temp.rename(columns=rename_map)
+            
             df_list.append(df_temp)
         except Exception as e:
             st.warning(f"Gagal membaca file {file}: {e}")
