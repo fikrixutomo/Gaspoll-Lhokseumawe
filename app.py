@@ -9,7 +9,6 @@ st.set_page_config(
     page_icon="🚗",
     layout="wide"
 )
-
 st.title("🚗 Dashboard Interaktif Analisis Tunggakan Kendaraan")
 st.markdown("Aplikasi ini otomatis membaca dan menggabungkan seluruh data CSV di dalam folder.")
 
@@ -17,7 +16,6 @@ st.markdown("Aplikasi ini otomatis membaca dan menggabungkan seluruh data CSV di
 @st.cache_data
 def load_and_combine_data():
     file_list = glob.glob("*.csv")
-    
     # Filter agar file selain data utama tidak ikut terbaca
     file_list = [f for f in file_list if "Kode Plat" not in f and "Query result" not in f and "filtered" not in f]
     
@@ -27,26 +25,30 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            # Menggunakan sep=";" karena CSV baru menggunakan titik koma
+            # Mencoba membaca dengan separator titik koma (;) terlebih dahulu
             df_temp = pd.read_csv(file, sep=";")
-            
-            # Jika dibaca dengan sep=";" hanya menghasilkan 1 kolom, coba baca dengan sep="," (untuk file lama)
-            if len(df_temp.columns) <= 1:
+            if df_temp.shape[1] <= 1:
+                # Jika hasilnya hanya 1 kolom, coba baca dengan separator koma (,)
                 df_temp = pd.read_csv(file, sep=",")
-            
-            # Auto-rename nama kolom baru agar cocok dengan kode dashboard
-            rename_map = {
-                'samsat_asal_nama': 'nama_samsat',
-                'status_nomor_hp_valid': 'flag_nomor_hp_valid'
-            }
-            df_temp = df_temp.rename(columns=rename_map)
-            
             df_list.append(df_temp)
         except Exception as e:
             st.warning(f"Gagal membaca file {file}: {e}")
             
     if df_list:
-        return pd.concat(df_list, ignore_index=True)
+        df_combined = pd.concat(df_list, ignore_index=True)
+        
+        # Standardisasi Nama Kolom (Penyesuaian Otomatis)
+        rename_dict = {}
+        if 'samsat_asal_nama' in df_combined.columns and 'nama_samsat' not in df_combined.columns:
+            rename_dict['samsat_asal_nama'] = 'nama_samsat'
+        if 'status_nomor_hp_valid' in df_combined.columns and 'flag_nomor_hp_valid' not in df_combined.columns:
+            rename_dict['status_nomor_hp_valid'] = 'flag_nomor_hp_valid'
+            
+        if rename_dict:
+            df_combined = df_combined.rename(columns=rename_dict)
+            
+        return df_combined
+        
     return pd.DataFrame()
 
 df = load_and_combine_data()
@@ -72,7 +74,7 @@ else:
             samsat_unique = [str(x) for x in df_sub['nama_samsat'].dropna().unique()]
         else:
             samsat_unique = [str(x) for x in df['nama_samsat'].dropna().unique()]
-        
+            
         all_samsat = ["Semua Samsat"] + sorted(samsat_unique)
         selected_samsat = st.sidebar.selectbox("Pilih Unit Samsat:", all_samsat)
     else:
@@ -94,19 +96,36 @@ else:
     else:
         selected_hp = "Semua Status HP"
 
+    # --- FILTER BARU: STATUS PEMBAYARAN (LUNAS / BELUM) ---
+    if 'status_bayar' in df.columns:
+        bayar_unique = [str(x) for x in df['status_bayar'].dropna().unique()]
+        all_bayar_status = ["Semua Status Pembayaran"] + sorted(bayar_unique)
+        selected_bayar = st.sidebar.selectbox("Status Pembayaran:", all_bayar_status)
+    else:
+        selected_bayar = "Semua Status Pembayaran"
+
     # Pencarian Teks
     cari_kata = st.sidebar.text_input("Cari No. Polisi / Nama Pemilik:")
 
     # 4. TERAPKAN FILTER KE DATA
     df_filtered = df.copy()
+    
     if selected_cabang != "Semua Cabang" and 'nama_cabang' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['nama_cabang'] == selected_cabang]
+        
     if selected_samsat != "Semua Samsat" and 'nama_samsat' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['nama_samsat'] == selected_samsat]
+        
     if selected_tunggakan != "Semua Kelompok" and 'kelompok_selisih_hari_tunggakan' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['kelompok_selisih_hari_tunggakan'] == selected_tunggakan]
+        
     if selected_hp != "Semua Status HP" and 'flag_nomor_hp_valid' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['flag_nomor_hp_valid'] == selected_hp]
+        
+    # Penerapan Filter Status Pembayaran Baru
+    if selected_bayar != "Semua Status Pembayaran" and 'status_bayar' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['status_bayar'] == selected_bayar]
+        
     if cari_kata:
         cond_plat = df_filtered['no_polisi'].astype(str).str.contains(cari_kata, case=False, na=False) if 'no_polisi' in df_filtered.columns else False
         cond_nama = df_filtered['nama_pemilik_terakhir'].astype(str).str.contains(cari_kata, case=False, na=False) if 'nama_pemilik_terakhir' in df_filtered.columns else False
@@ -146,11 +165,12 @@ else:
 
     st.markdown("---")
 
-    # 7. TABEL DETAIL DATA (BISA DI-SORT SAMA SEPERTI EXCEL)
+    # 7. TABEL DETAIL DATA
     st.subheader("📋 Tabel Detail Kendaraan")
-    st.info("💡 **Tips:** Klik judul kolom pada tabel di bawah untuk mengurutkan (sort) data secara instan.")
+    st.info("💡 Tips: Klik judul kolom pada tabel di bawah untuk mengurutkan (sort) data secara instan.")
     
-    kolom_tampilan = [c for c in ['no_polisi', 'nama_pemilik_terakhir', 'nama_samsat', 'kode_jenis_kendaraan_deskripsi', 'tgl_mati_yad', 'nomor_hp', 'kelompok_selisih_hari_tunggakan', 'flag_nomor_hp_valid', 'prioritas'] if c in df_filtered.columns]
+    # Menambahkan 'status_bayar' ke daftar kolom yang ditampilkan di tabel jika ada
+    kolom_tampilan = [c for c in ['no_polisi', 'nama_pemilik_terakhir', 'nama_samsat', 'kode_jenis_kendaraan_deskripsi', 'tgl_mati_yad', 'nomor_hp', 'kelompok_selisih_hari_tunggakan', 'flag_nomor_hp_valid', 'status_bayar', 'prioritas'] if c in df_filtered.columns]
     
     st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
     
