@@ -5,14 +5,14 @@ import glob
 
 # 1. Konfigurasi Tampilan
 st.set_page_config(
-    page_title="Dashboard Tunggakan Kendaraan - GASPOL",
+    page_title="Dashboard Tunggakan",
     page_icon="🚗",
     layout="wide"
 )
 
-st.title("Dashboard Interaktif Tunggakan Kendaraan")
+st.title("Dashboard Analisis Tunggakan Kendaraan")
 
-# 2. Pemuatan Data
+# 2. Pemuatan Data Aman (Anti Bad Lines)
 @st.cache_data
 def load_and_combine_data():
     file_list = glob.glob("*.csv")
@@ -29,9 +29,23 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            df_temp = pd.read_csv(file, sep=";")
+            # Mencoba membaca dengan delimiter titik koma (;)
+            df_temp = pd.read_csv(
+                file, 
+                sep=";", 
+                on_bad_lines='skip', 
+                engine='python'
+            )
+            
+            # Jika hanya terbaca 1 kolom, coba baca dengan koma (,)
             if df_temp.shape[1] <= 1:
-                df_temp = pd.read_csv(file, sep=",")
+                df_temp = pd.read_csv(
+                    file, 
+                    sep=",", 
+                    on_bad_lines='skip', 
+                    engine='python'
+                )
+                
             df_list.append(df_temp)
         except Exception as e:
             st.warning(f"Gagal membaca file {file}: {e}")
@@ -54,7 +68,7 @@ def load_and_combine_data():
 df = load_and_combine_data()
 
 if df.empty:
-    st.error("File CSV tidak ditemukan! Pastikan file CSV tersimpan di folder yang sama.")
+    st.error("File CSV tidak ditemukan atau gagal dibaca.")
 else:
     if 'flag_nomor_hp_valid' in df.columns:
         col_hp_name = 'flag_nomor_hp_valid'
@@ -67,52 +81,59 @@ else:
     st.sidebar.header("Filter Data")
     
     if 'nama_cabang' in df.columns:
-        cabang_list = ["Semua Cabang"] + sorted([str(x) for x in df['nama_cabang'].dropna().unique()])
-        selected_cabang = st.sidebar.selectbox("Pilih Kantor Cabang:", cabang_list)
+        val_cabang = df['nama_cabang'].dropna().unique()
+        cabang_list = ["Semua Cabang"] + sorted([str(x) for x in val_cabang])
+        selected_cabang = st.sidebar.selectbox("Cabang:", cabang_list)
     else:
         selected_cabang = "Semua Cabang"
 
     if 'nama_samsat' in df.columns:
         if selected_cabang != "Semua Cabang" and 'nama_cabang' in df.columns:
             df_sub = df[df['nama_cabang'] == selected_cabang]
-            samsat_list = ["Semua Samsat"] + sorted([str(x) for x in df_sub['nama_samsat'].dropna().unique()])
+            val_samsat = df_sub['nama_samsat'].dropna().unique()
         else:
-            samsat_list = ["Semua Samsat"] + sorted([str(x) for x in df['nama_samsat'].dropna().unique()])
-        selected_samsat = st.sidebar.selectbox("Pilih Unit Samsat:", samsat_list)
+            val_samsat = df['nama_samsat'].dropna().unique()
+        samsat_list = ["Semua Samsat"] + sorted([str(x) for x in val_samsat])
+        selected_samsat = st.sidebar.selectbox("Samsat:", samsat_list)
     else:
         selected_samsat = "Semua Samsat"
 
     if 'kelompok_selisih_hari_tunggakan' in df.columns:
-        tunggakan_list = ["Semua Kelompok"] + sorted([str(x) for x in df['kelompok_selisih_hari_tunggakan'].dropna().unique()])
+        val_tunggakan = df['kelompok_selisih_hari_tunggakan'].dropna().unique()
+        tunggakan_list = ["Semua Kelompok"] + sorted([str(x) for x in val_tunggakan])
         selected_tunggakan = st.sidebar.selectbox("Masa Tunggakan:", tunggakan_list)
     else:
         selected_tunggakan = "Semua Kelompok"
 
     if col_hp_name and col_hp_name in df.columns:
-        hp_list = ["Semua Status HP"] + sorted([str(x) for x in df[col_hp_name].dropna().unique()])
-        selected_hp = st.sidebar.selectbox("Status Nomor HP:", hp_list)
+        val_hp = df[col_hp_name].dropna().unique()
+        hp_list = ["Semua Status HP"] + sorted([str(x) for x in val_hp])
+        selected_hp = st.sidebar.selectbox("Status HP:", hp_list)
     else:
         selected_hp = "Semua Status HP"
 
     if 'status_bayar' in df.columns:
-        bayar_list = ["Semua Status Bayar"] + sorted([str(x) for x in df['status_bayar'].dropna().unique()])
+        val_bayar = df['status_bayar'].dropna().unique()
+        bayar_list = ["Semua Status Bayar"] + sorted([str(x) for x in val_bayar])
         selected_bayar = st.sidebar.selectbox("Status Pembayaran:", bayar_list)
     else:
         selected_bayar = "Semua Status Bayar"
 
     if 'status_tindak_lanjut' in df.columns:
-        tl_list = ["Semua Status TL"] + sorted([str(x) for x in df['status_tindak_lanjut'].dropna().unique()])
+        val_tl = df['status_tindak_lanjut'].dropna().unique()
+        tl_list = ["Semua Status TL"] + sorted([str(x) for x in val_tl])
         selected_tl = st.sidebar.selectbox("Status Tindak Lanjut:", tl_list)
     else:
         selected_tl = "Semua Status TL"
 
     if 'pemilik_jenis' in df.columns:
-        pemilik_list = ["Semua Jenis Pemilik"] + sorted([str(x) for x in df['pemilik_jenis'].dropna().unique()])
+        val_pemilik = df['pemilik_jenis'].dropna().unique()
+        pemilik_list = ["Semua Jenis Pemilik"] + sorted([str(x) for x in val_pemilik])
         selected_pemilik = st.sidebar.selectbox("Jenis Pemilik:", pemilik_list)
     else:
         selected_pemilik = "Semua Jenis Pemilik"
 
-    cari_kata = st.sidebar.text_input("Cari No. Polisi / Nama Pemilik:")
+    cari_kata = st.sidebar.text_input("Cari Plat / Nama:")
 
     # 4. Terapkan Filter
     df_filtered = df.copy()
@@ -199,29 +220,29 @@ else:
     c1.metric("Total Kendaraan", f"{total_kendaraan:,} Unit")
     c2.metric("Nomor HP Valid", f"{hp_valid:,} Unit")
     c3.metric("Rasio HP Valid", f"{persen_hp_valid:.1f}%")
-    c4.metric("Efektivitas TL (Konversi Lunas)", f"{conversion_rate:.1f}%")
+    c4.metric("Efektivitas TL", f"{conversion_rate:.1f}%")
 
     st.markdown("---")
 
-    st.subheader("Analisis Pembayaran & Status Tindak Lanjut")
+    st.subheader("Analisis Pembayaran & Status TL")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Kendaraan Lunas", f"{jml_lunas:,} Unit", f"Persentase: {persen_lunas:.1f}%")
-    m2.metric("Kendaraan Belum Lunas", f"{jml_belum_lunas:,} Unit", f"Persentase: {persen_belum_lunas:.1f}%", delta_color="inverse")
+    m1.metric("Kendaraan Lunas", f"{jml_lunas:,} Unit", f"{persen_lunas:.1f}%")
+    m2.metric("Kendaraan Belum Lunas", f"{jml_belum_lunas:,} Unit", f"{persen_belum_lunas:.1f}%", delta_color="inverse")
     m3.metric("Belum Lunas Sudah TL", f"{jml_blm_lunas_sdh_tl:,} Unit")
     m4.metric("Lunas Belum TL", f"{jml_lunas_blm_tl:,} Unit")
 
     if jml_blm_lunas_blm_tl > 0:
-        st.warning(f"Beban Kerja Utama: Terdapat {jml_blm_lunas_blm_tl:,} Unit kendaraan yang Belum Lunas dan Belum Ditindaklanjuti.")
+        st.warning(f"Beban Kerja: Terdapat {jml_blm_lunas_blm_tl:,} Unit belum lunas & belum TL.")
 
     st.markdown("---")
 
     # 7. Visualisasi Grafis
-    st.subheader("Visualisasi & Analisis Grafis")
+    st.subheader("Visualisasi Grafis")
     
     row1_col1, row1_col2 = st.columns(2)
 
     with row1_col1:
-        st.markdown("##### Matrik Status Pembayaran vs Tindak Lanjut")
+        st.markdown("##### Status Pembayaran vs Tindak Lanjut")
         if not df_filtered.empty and 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
             df_grouped = df_filtered.groupby(['status_bayar', 'status_tindak_lanjut']).size().reset_index(name='Jumlah')
             fig_grouped = px.bar(
@@ -239,7 +260,7 @@ else:
             st.info("Data tidak mencukupi untuk bagan ini.")
 
     with row1_col2:
-        st.markdown("##### Top 10 Samsat Terbanyak Terfilter")
+        st.markdown("##### Top 10 Samsat Terbanyak")
         if not df_filtered.empty and 'nama_samsat' in df_filtered.columns:
             samsat_counts = df_filtered['nama_samsat'].value_counts().head(10).reset_index()
             samsat_counts.columns = ['Samsat', 'Jumlah']
@@ -252,60 +273,4 @@ else:
                 color_continuous_scale='Blues',
                 text='Jumlah'
             )
-            fig_samsat.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_samsat, use_container_width=True)
-        else:
-            st.info("Kolom nama_samsat tidak ditemukan.")
-
-    row2_col1, row2_col2 = st.columns(2)
-
-    with row2_col1:
-        st.markdown("##### Distribusi Masa Tunggakan")
-        if not df_filtered.empty and 'kelompok_selisih_hari_tunggakan' in df_filtered.columns:
-            tunggakan_counts = df_filtered['kelompok_selisih_hari_tunggakan'].value_counts().reset_index()
-            tunggakan_counts.columns = ['Masa Tunggakan', 'Jumlah']
-            fig_pie = px.pie(
-                tunggakan_counts, 
-                values='Jumlah', 
-                names='Masa Tunggakan', 
-                hole=0.35, 
-                color_discrete_sequence=px.colors.qualitative.Pastel
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-    with row2_col2:
-        st.markdown("##### Sebaran Jenis Kepemilikan")
-        if not df_filtered.empty and 'pemilik_jenis' in df_filtered.columns:
-            pemilik_counts = df_filtered['pemilik_jenis'].value_counts().reset_index()
-            pemilik_counts.columns = ['Jenis Pemilik', 'Jumlah']
-            fig_donut = px.pie(
-                pemilik_counts, 
-                values='Jumlah', 
-                names='Jenis Pemilik', 
-                hole=0.4, 
-                color_discrete_sequence=px.colors.qualitative.Bold
-            )
-            st.plotly_chart(fig_donut, use_container_width=True)
-
-    st.markdown("---")
-
-    # 8. Tabel Detail Data
-    st.subheader("Tabel Detail Kendaraan Terfilter")
-    st.info("Tips: Klik pada judul kolom di bawah untuk mengurutkan (sort) data secara instan.")
-    
-    kolom_tampilan = [c for c in [
-        'no_polisi', 'nama_pemilik_terakhir', 'pemilik_jenis', 'nama_samsat', 
-        'kode_jenis_kendaraan_deskripsi', 'tgl_mati_yad', 'nomor_hp', 
-        'kelompok_selisih_hari_tunggakan', 'status_nomor_hp_valid', 'flag_nomor_hp_valid',
-        'status_tindak_lanjut', 'status_bayar', 'prioritas'
-    ] if c in df_filtered.columns]
-    
-    st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
-    
-    csv_data = df_filtered.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="Download Hasil Filter Data Ini (.CSV)",
-        data=csv_data,
-        file_name="data_tunggakan_filtered.csv",
-        mime="text/csv"
-    )
+            fig_sams
