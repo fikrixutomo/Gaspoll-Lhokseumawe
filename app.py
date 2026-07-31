@@ -3,17 +3,16 @@ import pandas as pd
 import plotly.express as px
 import glob
 
-# 1. Konfigurasi Tampilan Halaman
+# 1. Konfigurasi Tampilan
 st.set_page_config(
-    page_title="Dashboard Tunggakan Kendaraan - GASPOL",
+    page_title="Dashboard Tunggakan",
     page_icon="🚗",
     layout="wide"
 )
 
-st.title("🚗 Dashboard Interaktif Analisis Tunggakan Kendaraan")
-st.markdown("Aplikasi analisis interaktif untuk memantau status pembayaran, tindak lanjut, dan potensi penerimaan pajak kendaraan.")
+st.title("Dashboard Analisis Tunggakan Kendaraan")
 
-# 2. Pemuatan & Penggabungan Data Aman
+# 2. Pemuatan Data Aman (Anti Bad Lines)
 @st.cache_data
 def load_and_combine_data():
     file_list = glob.glob("*.csv")
@@ -30,19 +29,9 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            df_temp = pd.read_csv(
-                file, 
-                sep=";", 
-                on_bad_lines='skip', 
-                engine='python'
-            )
+            df_temp = pd.read_csv(file, sep=";", on_bad_lines='skip', engine='python')
             if df_temp.shape[1] <= 1:
-                df_temp = pd.read_csv(
-                    file, 
-                    sep=",", 
-                    on_bad_lines='skip', 
-                    engine='python'
-                )
+                df_temp = pd.read_csv(file, sep=",", on_bad_lines='skip', engine='python')
             df_list.append(df_temp)
         except Exception as e:
             st.warning(f"Gagal membaca file {file}: {e}")
@@ -65,9 +54,8 @@ def load_and_combine_data():
 df = load_and_combine_data()
 
 if df.empty:
-    st.error("⚠️ File CSV tidak ditemukan! Pastikan file CSV tersimpan di folder yang sama.")
+    st.error("File CSV tidak ditemukan atau gagal dibaca.")
 else:
-    # Penentuan Nama Kolom HP Valid
     if 'flag_nomor_hp_valid' in df.columns:
         col_hp_name = 'flag_nomor_hp_valid'
     elif 'status_nomor_hp_valid' in df.columns:
@@ -75,13 +63,13 @@ else:
     else:
         col_hp_name = None
 
-    # 3. Sidebar Filter Data
-    st.sidebar.header("🔍 Filter Data")
+    # 3. Sidebar Filter
+    st.sidebar.header("Filter Data")
     
     if 'nama_cabang' in df.columns:
         val_cabang = df['nama_cabang'].dropna().unique()
         cabang_list = ["Semua Cabang"] + sorted([str(x) for x in val_cabang])
-        selected_cabang = st.sidebar.selectbox("Pilih Kantor Cabang:", cabang_list)
+        selected_cabang = st.sidebar.selectbox("Cabang:", cabang_list)
     else:
         selected_cabang = "Semua Cabang"
 
@@ -92,7 +80,7 @@ else:
         else:
             val_samsat = df['nama_samsat'].dropna().unique()
         samsat_list = ["Semua Samsat"] + sorted([str(x) for x in val_samsat])
-        selected_samsat = st.sidebar.selectbox("Pilih Unit Samsat:", samsat_list)
+        selected_samsat = st.sidebar.selectbox("Samsat:", samsat_list)
     else:
         selected_samsat = "Semua Samsat"
 
@@ -106,23 +94,23 @@ else:
     if col_hp_name and col_hp_name in df.columns:
         val_hp = df[col_hp_name].dropna().unique()
         hp_list = ["Semua Status HP"] + sorted([str(x) for x in val_hp])
-        selected_hp = st.sidebar.selectbox("Status Nomor HP:", hp_list)
+        selected_hp = st.sidebar.selectbox("Status HP:", hp_list)
     else:
         selected_hp = "Semua Status HP"
 
     if 'status_bayar' in df.columns:
         val_bayar = df['status_bayar'].dropna().unique()
-        bayar_list = ["Semua Status Pembayaran"] + sorted([str(x) for x in val_bayar])
+        bayar_list = ["Semua Status Bayar"] + sorted([str(x) for x in val_bayar])
         selected_bayar = st.sidebar.selectbox("Status Pembayaran:", bayar_list)
     else:
-        selected_bayar = "Semua Status Pembayaran"
+        selected_bayar = "Semua Status Bayar"
 
     if 'status_tindak_lanjut' in df.columns:
         val_tl = df['status_tindak_lanjut'].dropna().unique()
-        tl_list = ["Semua Status Tindak Lanjut"] + sorted([str(x) for x in val_tl])
+        tl_list = ["Semua Status TL"] + sorted([str(x) for x in val_tl])
         selected_tl = st.sidebar.selectbox("Status Tindak Lanjut:", tl_list)
     else:
-        selected_tl = "Semua Status Tindak Lanjut"
+        selected_tl = "Semua Status TL"
 
     if 'pemilik_jenis' in df.columns:
         val_pemilik = df['pemilik_jenis'].dropna().unique()
@@ -131,9 +119,9 @@ else:
     else:
         selected_pemilik = "Semua Jenis Pemilik"
 
-    cari_kata = st.sidebar.text_input("Cari No. Polisi / Nama Pemilik:")
+    cari_kata = st.sidebar.text_input("Cari Plat / Nama:")
 
-    # 4. Penerapan Filter ke Dataset
+    # 4. Terapkan Filter
     df_filtered = df.copy()
     
     if selected_cabang != "Semua Cabang" and 'nama_cabang' in df_filtered.columns:
@@ -148,10 +136,10 @@ else:
     if selected_hp != "Semua Status HP" and col_hp_name and col_hp_name in df_filtered.columns:
         df_filtered = df_filtered[df_filtered[col_hp_name] == selected_hp]
         
-    if selected_bayar != "Semua Status Pembayaran" and 'status_bayar' in df_filtered.columns:
+    if selected_bayar != "Semua Status Bayar" and 'status_bayar' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['status_bayar'] == selected_bayar]
 
-    if selected_tl != "Semua Status Tindak Lanjut" and 'status_tindak_lanjut' in df_filtered.columns:
+    if selected_tl != "Semua Status TL" and 'status_tindak_lanjut' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['status_tindak_lanjut'] == selected_tl]
 
     if selected_pemilik != "Semua Jenis Pemilik" and 'pemilik_jenis' in df_filtered.columns:
@@ -162,7 +150,7 @@ else:
         cond_nama = df_filtered['nama_pemilik_terakhir'].astype(str).str.contains(cari_kata, case=False, na=False) if 'nama_pemilik_terakhir' in df_filtered.columns else False
         df_filtered = df_filtered[cond_plat | cond_nama]
 
-    # 5. Perhitungan Metrik KPI Fleksibel
+    # 5. Hitung Metrik KPI
     total_kendaraan = len(df_filtered)
     
     if col_hp_name and col_hp_name in df_filtered.columns:
@@ -175,16 +163,16 @@ else:
     else:
         persen_hp_valid = 0.0
 
-    # Perhitungan Fleksibel Status Bayar & Tindak Lanjut
+    # LOGIKA BARU YANG SUPER KETAT
     if 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
         s_bayar = df_filtered['status_bayar'].astype(str).str.strip().str.upper()
         s_tl = df_filtered['status_tindak_lanjut'].astype(str).str.strip().str.upper()
 
-        cond_lunas = s_bayar.str.contains('LUNAS|SUDAH BAYAR|SDH BAYAR', na=False)
         cond_blm_lunas = s_bayar.str.contains('BELUM LUNAS|BELUM BAYAR|BLM BAYAR', na=False)
+        cond_lunas = s_bayar.str.contains('LUNAS|SUDAH BAYAR|SDH BAYAR', na=False) & ~cond_blm_lunas
 
-        cond_sdh_tl = s_tl.str.contains('SUDAH|SDH', na=False)
-        cond_blm_tl = s_tl.str.contains('BELUM|BLM', na=False)
+        cond_sdh_tl = s_tl.str.contains('SUDAH DITINDAKLANJUTI|SUDAH TL|SDH TL', na=False)
+        cond_blm_tl = s_tl.str.contains('BELUM DITINDAKLANJUTI|BELUM TL|BLM TL', na=False) & ~cond_sdh_tl
 
         jml_lunas = len(df_filtered[cond_lunas])
         jml_belum_lunas = len(df_filtered[cond_blm_lunas])
@@ -193,9 +181,12 @@ else:
         jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
         jml_blm_lunas_blm_tl = len(df_filtered[cond_blm_lunas & cond_blm_tl])
         jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
-
+        
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
-        conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
+        if total_sdh_tl > 0:
+            conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl) * 100
+        else:
+            conversion_rate = 0.0
     else:
         jml_lunas = 0
         jml_belum_lunas = 0
@@ -212,35 +203,35 @@ else:
         persen_belum_lunas = 0.0
 
     # 6. Tampilan KPI Cards
-    st.subheader("📌 Ringkasan Indikator Utama (KPI)")
+    st.subheader("Ringkasan Indikator Utama (KPI)")
     
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Kendaraan", f"{total_kendaraan:,} Unit")
     c2.metric("Nomor HP Valid", f"{hp_valid:,} Unit")
     c3.metric("Rasio HP Valid", f"{persen_hp_valid:.1f}%")
-    c4.metric("Efektivitas TL (Konversi Lunas)", f"{conversion_rate:.1f}%")
+    c4.metric("Efektivitas TL", f"{conversion_rate:.1f}%")
 
     st.markdown("---")
 
-    st.subheader("💳 Analisis Pembayaran & Status Tindak Lanjut")
+    st.subheader("Analisis Pembayaran & Status TL")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Kendaraan Lunas", f"{jml_lunas:,} Unit", f"Persentase: {persen_lunas:.1f}%")
-    m2.metric("Kendaraan Belum Lunas", f"{jml_belum_lunas:,} Unit", f"Persentase: {persen_belum_lunas:.1f}%", delta_color="inverse")
+    m1.metric("Kendaraan Lunas", f"{jml_lunas:,} Unit", f"{persen_lunas:.1f}%")
+    m2.metric("Kendaraan Belum Lunas", f"{jml_belum_lunas:,} Unit", f"{persen_belum_lunas:.1f}%", delta_color="inverse")
     m3.metric("Belum Lunas Sudah TL", f"{jml_blm_lunas_sdh_tl:,} Unit")
     m4.metric("Lunas Belum TL", f"{jml_lunas_blm_tl:,} Unit")
 
     if jml_blm_lunas_blm_tl > 0:
-        st.warning(f"🚨 **Beban Kerja Utama (PR Tim Field):** Terdapat **{jml_blm_lunas_blm_tl:,} Unit** kendaraan yang **Belum Lunas dan Belum Ditindaklanjuti**.")
+        st.warning(f"Beban Kerja: Terdapat {jml_blm_lunas_blm_tl:,} Unit belum lunas & belum TL.")
 
     st.markdown("---")
 
-    # 7. Visualisasi Grafis Interaktif
-    st.subheader("📊 Visualisasi & Analisis Grafis")
+    # 7. Visualisasi Grafis
+    st.subheader("Visualisasi Grafis")
     
     row1_col1, row1_col2 = st.columns(2)
 
     with row1_col1:
-        st.markdown("##### Matrik Status Pembayaran vs Tindak Lanjut")
+        st.markdown("##### Status Pembayaran vs Tindak Lanjut")
         if not df_filtered.empty and 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
             df_grouped = df_filtered.groupby(['status_bayar', 'status_tindak_lanjut']).size().reset_index(name='Jumlah')
             fig_grouped = px.bar(
@@ -258,7 +249,7 @@ else:
             st.info("Data tidak mencukupi untuk bagan ini.")
 
     with row1_col2:
-        st.markdown("##### Top 10 Samsat Terbanyak Terfilter")
+        st.markdown("##### Top 10 Samsat Terbanyak")
         if not df_filtered.empty and 'nama_samsat' in df_filtered.columns:
             samsat_counts = df_filtered['nama_samsat'].value_counts().head(10).reset_index()
             samsat_counts.columns = ['Samsat', 'Jumlah']
@@ -293,7 +284,7 @@ else:
             st.plotly_chart(fig_pie, use_container_width=True)
 
     with row2_col2:
-        st.markdown("##### Sebaran Jenis Kepemilikan (Perorangan vs Badan Usaha)")
+        st.markdown("##### Sebaran Jenis Kepemilikan")
         if not df_filtered.empty and 'pemilik_jenis' in df_filtered.columns:
             pemilik_counts = df_filtered['pemilik_jenis'].value_counts().reset_index()
             pemilik_counts.columns = ['Jenis Pemilik', 'Jumlah']
@@ -308,9 +299,9 @@ else:
 
     st.markdown("---")
 
-    # 8. Tabel Detail Data & Download
-    st.subheader("📋 Tabel Detail Kendaraan Terfilter")
-    st.info("💡 **Tips:** Klik pada judul kolom di bawah untuk mengurutkan (sort) data secara instan.")
+    # 8. Tabel Detail Data
+    st.subheader("Tabel Detail Kendaraan")
+    st.info("Tips: Klik judul kolom untuk mengurutkan (sort) data.")
     
     kolom_tampilan = [c for c in [
         'no_polisi', 'nama_pemilik_terakhir', 'pemilik_jenis', 'nama_samsat', 
@@ -323,7 +314,7 @@ else:
     
     csv_data = df_filtered.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Download Hasil Filter Data Ini (.CSV)",
+        label="Download Hasil Filter (.CSV)",
         data=csv_data,
         file_name="data_tunggakan_filtered.csv",
         mime="text/csv"
