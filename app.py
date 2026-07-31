@@ -162,7 +162,7 @@ else:
         cond_nama = df_filtered['nama_pemilik_terakhir'].astype(str).str.contains(cari_kata, case=False, na=False) if 'nama_pemilik_terakhir' in df_filtered.columns else False
         df_filtered = df_filtered[cond_plat | cond_nama]
 
-    # 5. Perhitungan Metrik KPI
+    # 5. Perhitungan Metrik KPI Fleksibel
     total_kendaraan = len(df_filtered)
     
     if col_hp_name and col_hp_name in df_filtered.columns:
@@ -175,12 +175,34 @@ else:
     else:
         persen_hp_valid = 0.0
 
-    if 'status_bayar' in df_filtered.columns:
-        jml_lunas = len(df_filtered[df_filtered['status_bayar'].astype(str).str.upper() == 'LUNAS'])
-        jml_belum_lunas = len(df_filtered[df_filtered['status_bayar'].astype(str).str.upper() == 'BELUM LUNAS'])
+    # Perhitungan Fleksibel Status Bayar & Tindak Lanjut
+    if 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
+        s_bayar = df_filtered['status_bayar'].astype(str).str.strip().str.upper()
+        s_tl = df_filtered['status_tindak_lanjut'].astype(str).str.strip().str.upper()
+
+        cond_lunas = s_bayar.str.contains('LUNAS|SUDAH BAYAR|SDH BAYAR', na=False)
+        cond_blm_lunas = s_bayar.str.contains('BELUM LUNAS|BELUM BAYAR|BLM BAYAR', na=False)
+
+        cond_sdh_tl = s_tl.str.contains('SUDAH|SDH', na=False)
+        cond_blm_tl = s_tl.str.contains('BELUM|BLM', na=False)
+
+        jml_lunas = len(df_filtered[cond_lunas])
+        jml_belum_lunas = len(df_filtered[cond_blm_lunas])
+
+        jml_blm_lunas_sdh_tl = len(df_filtered[cond_blm_lunas & cond_sdh_tl])
+        jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
+        jml_blm_lunas_blm_tl = len(df_filtered[cond_blm_lunas & cond_blm_tl])
+        jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
+
+        total_sdh_tl = len(df_filtered[cond_sdh_tl])
+        conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
     else:
         jml_lunas = 0
         jml_belum_lunas = 0
+        jml_blm_lunas_sdh_tl = 0
+        jml_lunas_blm_tl = 0
+        jml_blm_lunas_blm_tl = 0
+        conversion_rate = 0.0
 
     if total_kendaraan > 0:
         persen_lunas = (jml_lunas / total_kendaraan) * 100
@@ -188,28 +210,6 @@ else:
     else:
         persen_lunas = 0.0
         persen_belum_lunas = 0.0
-
-    if 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
-        cond_blm_lunas = df_filtered['status_bayar'].astype(str).str.upper() == 'BELUM LUNAS'
-        cond_sdh_lunas = df_filtered['status_bayar'].astype(str).str.upper() == 'LUNAS'
-        cond_sdh_tl = df_filtered['status_tindak_lanjut'].astype(str).str.upper() == 'SUDAH DITINDAKLANJUTI'
-        cond_blm_tl = df_filtered['status_tindak_lanjut'].astype(str).str.upper() == 'BELUM DITINDAKLANJUTI'
-
-        jml_blm_lunas_sdh_tl = len(df_filtered[cond_blm_lunas & cond_sdh_tl])
-        jml_lunas_blm_tl = len(df_filtered[cond_sdh_lunas & cond_blm_tl])
-        jml_blm_lunas_blm_tl = len(df_filtered[cond_blm_lunas & cond_blm_tl])
-        jml_lunas_sdh_tl = len(df_filtered[cond_sdh_lunas & cond_sdh_tl])
-        
-        total_sdh_tl = len(df_filtered[cond_sdh_tl])
-        if total_sdh_tl > 0:
-            conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl) * 100
-        else:
-            conversion_rate = 0.0
-    else:
-        jml_blm_lunas_sdh_tl = 0
-        jml_lunas_blm_tl = 0
-        jml_blm_lunas_blm_tl = 0
-        conversion_rate = 0.0
 
     # 6. Tampilan KPI Cards
     st.subheader("📌 Ringkasan Indikator Utama (KPI)")
