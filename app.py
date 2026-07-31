@@ -96,13 +96,21 @@ else:
     else:
         selected_hp = "Semua Status HP"
 
-    # --- FILTER BARU: STATUS PEMBAYARAN (LUNAS / BELUM) ---
+    # Filter Status Pembayaran
     if 'status_bayar' in df.columns:
         bayar_unique = [str(x) for x in df['status_bayar'].dropna().unique()]
         all_bayar_status = ["Semua Status Pembayaran"] + sorted(bayar_unique)
         selected_bayar = st.sidebar.selectbox("Status Pembayaran:", all_bayar_status)
     else:
         selected_bayar = "Semua Status Pembayaran"
+
+    # --- FILTER BARU: STATUS TINDAK LANJUT ---
+    if 'status_tindak_lanjut' in df.columns:
+        tl_unique = [str(x) for x in df['status_tindak_lanjut'].dropna().unique()]
+        all_tl_status = ["Semua Status Tindak Lanjut"] + sorted(tl_unique)
+        selected_tl = st.sidebar.selectbox("Status Tindak Lanjut:", all_tl_status)
+    else:
+        selected_tl = "Semua Status Tindak Lanjut"
 
     # Pencarian Teks
     cari_kata = st.sidebar.text_input("Cari No. Polisi / Nama Pemilik:")
@@ -122,9 +130,12 @@ else:
     if selected_hp != "Semua Status HP" and 'flag_nomor_hp_valid' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['flag_nomor_hp_valid'] == selected_hp]
         
-    # Penerapan Filter Status Pembayaran Baru
     if selected_bayar != "Semua Status Pembayaran" and 'status_bayar' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['status_bayar'] == selected_bayar]
+
+    # Penerapan Filter Status Tindak Lanjut Baru
+    if selected_tl != "Semua Status Tindak Lanjut" and 'status_tindak_lanjut' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['status_tindak_lanjut'] == selected_tl]
         
     if cari_kata:
         cond_plat = df_filtered['no_polisi'].astype(str).str.contains(cari_kata, case=False, na=False) if 'no_polisi' in df_filtered.columns else False
@@ -169,8 +180,13 @@ else:
     st.subheader("📋 Tabel Detail Kendaraan")
     st.info("💡 Tips: Klik judul kolom pada tabel di bawah untuk mengurutkan (sort) data secara instan.")
     
-    # Menambahkan 'status_bayar' ke daftar kolom yang ditampilkan di tabel jika ada
-    kolom_tampilan = [c for c in ['no_polisi', 'nama_pemilik_terakhir', 'nama_samsat', 'kode_jenis_kendaraan_deskripsi', 'tgl_mati_yad', 'nomor_hp', 'kelompok_selisih_hari_tunggakan', 'flag_nomor_hp_valid', 'status_bayar', 'prioritas'] if c in df_filtered.columns]
+    # Menampilkan kolom-kolom penting termasuk status_tindak_lanjut dan status_bayar
+    kolom_tampilan = [c for c in [
+        'no_polisi', 'nama_pemilik_terakhir', 'nama_samsat', 
+        'kode_jenis_kendaraan_deskripsi', 'tgl_mati_yad', 'nomor_hp', 
+        'kelompok_selisih_hari_tunggakan', 'flag_nomor_hp_valid', 
+        'status_tindak_lanjut', 'status_bayar', 'prioritas'
+    ] if c in df_filtered.columns]
     
     st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
     
