@@ -163,7 +163,7 @@ else:
     else:
         persen_hp_valid = 0.0
 
-    # LOGIKA BARU YANG SUPER KETAT
+    # LOGIKA PERHITUNGAN STATUS
     if 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
         s_bayar = df_filtered['status_bayar'].astype(str).str.strip().str.upper()
         s_tl = df_filtered['status_tindak_lanjut'].astype(str).str.strip().str.upper()
@@ -180,7 +180,7 @@ else:
         jml_blm_lunas_sdh_tl = len(df_filtered[cond_blm_lunas & cond_sdh_tl])
         jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
         jml_blm_lunas_blm_tl = len(df_filtered[cond_blm_lunas & cond_blm_tl])
-        jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
+        jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl]) # <-- Ini variabel Lunas & Sudah TL
         
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
         if total_sdh_tl > 0:
@@ -193,6 +193,7 @@ else:
         jml_blm_lunas_sdh_tl = 0
         jml_lunas_blm_tl = 0
         jml_blm_lunas_blm_tl = 0
+        jml_lunas_sdh_tl = 0
         conversion_rate = 0.0
 
     if total_kendaraan > 0:
@@ -214,11 +215,13 @@ else:
     st.markdown("---")
 
     st.subheader("Analisis Pembayaran & Status TL")
-    m1, m2, m3, m4 = st.columns(4)
+    # Menggunakan 5 Kolom agar Lunas Sudah TL bisa ditambahkan berdampingan
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Kendaraan Lunas", f"{jml_lunas:,} Unit", f"{persen_lunas:.1f}%")
     m2.metric("Kendaraan Belum Lunas", f"{jml_belum_lunas:,} Unit", f"{persen_belum_lunas:.1f}%", delta_color="inverse")
-    m3.metric("Belum Lunas Sudah TL", f"{jml_blm_lunas_sdh_tl:,} Unit")
+    m3.metric("Lunas Sudah TL", f"{jml_lunas_sdh_tl:,} Unit") # <-- METRIK BARU
     m4.metric("Lunas Belum TL", f"{jml_lunas_blm_tl:,} Unit")
+    m5.metric("Belum Lunas Sudah TL", f"{jml_blm_lunas_sdh_tl:,} Unit")
 
     if jml_blm_lunas_blm_tl > 0:
         st.warning(f"Beban Kerja: Terdapat {jml_blm_lunas_blm_tl:,} Unit belum lunas & belum TL.")
