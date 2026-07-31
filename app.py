@@ -57,7 +57,7 @@ df = load_and_combine_data()
 if df.empty:
     st.error("⚠️ File CSV tidak ditemukan! Pastikan file CSV data kendaraan disimpan di folder yang sama dengan app.py.")
 else:
-    # Penentuan nama kolom HP secara aman
+    # Penentuan kolom HP secara aman
     if 'flag_nomor_hp_valid' in df.columns:
         col_hp_name = 'flag_nomor_hp_valid'
     elif 'status_nomor_hp_valid' in df.columns:
@@ -93,4 +93,114 @@ else:
         selected_tunggakan = "Semua Kelompok"
 
     if col_hp_name and col_hp_name in df.columns:
-        hp_list =
+        hp_list = ["Semua Status HP"] + sorted([str(x) for x in df[col_hp_name].dropna().unique()])
+        selected_hp = st.sidebar.selectbox("Status Nomor HP:", hp_list)
+    else:
+        selected_hp = "Semua Status HP"
+
+    if 'status_bayar' in df.columns:
+        bayar_list = ["Semua Status Pembayaran"] + sorted([str(x) for x in df['status_bayar'].dropna().unique()])
+        selected_bayar = st.sidebar.selectbox("Status Pembayaran:", bayar_list)
+    else:
+        selected_bayar = "Semua Status Pembayaran"
+
+    if 'status_tindak_lanjut' in df.columns:
+        tl_list = ["Semua Status Tindak Lanjut"] + sorted([str(x) for x in df['status_tindak_lanjut'].dropna().unique()])
+        selected_tl = st.sidebar.selectbox("Status Tindak Lanjut:", tl_list)
+    else:
+        selected_tl = "Semua Status Tindak Lanjut"
+
+    if 'pemilik_jenis' in df.columns:
+        pemilik_list = ["Semua Jenis Pemilik"] + sorted([str(x) for x in df['pemilik_jenis'].dropna().unique()])
+        selected_pemilik = st.sidebar.selectbox("Jenis Pemilik:", pemilik_list)
+    else:
+        selected_pemilik = "Semua Jenis Pemilik"
+
+    cari_kata = st.sidebar.text_input("Cari No. Polisi / Nama Pemilik:")
+
+    # ==========================================
+    # 4. TERAPKAN FILTER KE DATASET
+    # ==========================================
+    df_filtered = df.copy()
+    
+    if selected_cabang != "Semua Cabang" and 'nama_cabang' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['nama_cabang'] == selected_cabang]
+        
+    if selected_samsat != "Semua Samsat" and 'nama_samsat' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['nama_samsat'] == selected_samsat]
+        
+    if selected_tunggakan != "Semua Kelompok" and 'kelompok_selisih_hari_tunggakan' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['kelompok_selisih_hari_tunggakan'] == selected_tunggakan]
+        
+    if selected_hp != "Semua Status HP" and col_hp_name and col_hp_name in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered[col_hp_name] == selected_hp]
+        
+    if selected_bayar != "Semua Status Pembayaran" and 'status_bayar' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['status_bayar'] == selected_bayar]
+
+    if selected_tl != "Semua Status Tindak Lanjut" and 'status_tindak_lanjut' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['status_tindak_lanjut'] == selected_tl]
+
+    if selected_pemilik != "Semua Jenis Pemilik" and 'pemilik_jenis' in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered['pemilik_jenis'] == selected_pemilik]
+        
+    if cari_kata:
+        cond_plat = df_filtered['no_polisi'].astype(str).str.contains(cari_kata, case=False, na=False) if 'no_polisi' in df_filtered.columns else False
+        cond_nama = df_filtered['nama_pemilik_terakhir'].astype(str).str.contains(cari_kata, case=False, na=False) if 'nama_pemilik_terakhir' in df_filtered.columns else False
+        df_filtered = df_filtered[cond_plat | cond_nama]
+
+    # ==========================================
+    # 5. PERHITUNGAN METRIK & INDICATOR (KPI)
+    # ==========================================
+    total_kendaraan = len(df_filtered)
+    
+    if col_hp_name and col_hp_name in df_filtered.columns:
+        hp_valid = len(df_filtered[df_filtered[col_hp_name].astype(str).str.upper() == 'VALID'])
+    else:
+        hp_valid = 0
+        
+    if total_kendaraan > 0:
+        persen_hp_valid = (hp_valid / total_kendaraan) * 100
+    else:
+        persen_hp_valid = 0.0
+
+    if 'status_bayar' in df_filtered.columns:
+        jml_lunas = len(df_filtered[df_filtered['status_bayar'].astype(str).str.upper() == 'LUNAS'])
+        jml_belum_lunas = len(df_filtered[df_filtered['status_bayar'].astype(str).str.upper() == 'BELUM LUNAS'])
+    else:
+        jml_lunas = 0
+        jml_belum_lunas = 0
+
+    if total_kendaraan > 0:
+        persen_lunas = (jml_lunas / total_kendaraan) * 100
+        persen_belum_lunas = (jml_belum_lunas / total_kendaraan) * 100
+    else:
+        persen_lunas = 0.0
+        persen_belum_lunas = 0.0
+
+    if 'status_bayar' in df_filtered.columns and 'status_tindak_lanjut' in df_filtered.columns:
+        cond_blm_lunas = df_filtered['status_bayar'].astype(str).str.upper() == 'BELUM LUNAS'
+        cond_sdh_lunas = df_filtered['status_bayar'].astype(str).str.upper() == 'LUNAS'
+        cond_sdh_tl = df_filtered['status_tindak_lanjut'].astype(str).str.upper() == 'SUDAH DITINDAKLANJUTI'
+        cond_blm_tl = df_filtered['status_tindak_lanjut'].astype(str).str.upper() == 'BELUM DITINDAKLANJUTI'
+
+        jml_blm_lunas_sdh_tl = len(df_filtered[cond_blm_lunas & cond_sdh_tl])
+        jml_lunas_blm_tl = len(df_filtered[cond_sdh_lunas & cond_blm_tl])
+        jml_blm_lunas_blm_tl = len(df_filtered[cond_blm_lunas & cond_blm_tl])
+        jml_lunas_sdh_tl = len(df_filtered[cond_sdh_lunas & cond_sdh_tl])
+        
+        total_sdh_tl = len(df_filtered[cond_sdh_tl])
+        if total_sdh_tl > 0:
+            conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl) * 100
+        else:
+            conversion_rate = 0.0
+    else:
+        jml_blm_lunas_sdh_tl = 0
+        jml_lunas_blm_tl = 0
+        jml_blm_lunas_blm_tl = 0
+        conversion_rate = 0.0
+
+    # ==========================================
+    # TAMPILAN METRIK (KPI CARDS)
+    # ==========================================
+    st.subheader("📌 Ring
