@@ -6,12 +6,12 @@ import io
 
 # 1. Konfigurasi Tampilan
 st.set_page_config(
-    page_title="Dashboard Tunggakan - JR Lhokseumawe",
+    page_title="Dashboard GASPOLL - JR ACEH",
     page_icon="🚗",
     layout="wide"
 )
 
-st.title("Dashboard Analisis Tunggakan Kendaraan — Cabang Lhokseumawe")
+st.title("Dashboard Analisis GASPOLL — ACEH")
 
 # 2. Pemuatan Data Aman (Anti Bad Lines)
 @st.cache_data
