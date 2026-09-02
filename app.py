@@ -7,8 +7,10 @@ import io
 # ---------------------------------------------------
 # 1. KONFIGURASI HALAMAN & TAMPILAN
 # ---------------------------------------------------
+URL_LOGO_JR = "logo_jasa_raharja.png" 
+
 st.set_page_config(
-    page_title="Dashboard Tunggakan - JR Lhokseumawe", 
+    page_title="Dashboard Analisa Tunggakan Instansi - GASPOL", 
     page_icon="🏢", 
     layout="wide"
 )
@@ -57,9 +59,17 @@ def load_and_combine_data():
 df = load_and_combine_data()
 
 # ---------------------------------------------------
-# 3. HEADER & JUDUL DASHBOARD
+# 3. HEADER & LOGO DASHBOARD
 # ---------------------------------------------------
-st.title("🏢 Dashboard Analisis Tunggakan — JR Lhokseumawe")
+col1, col2 = st.columns([1, 8])
+with col1:
+    try:
+        st.image(URL_LOGO_JR, width=80)
+    except:
+        st.markdown("<h1>🏢</h1>", unsafe_allow_html=True)
+with col2:
+    st.title("Dashboard Analisis Tunggakan Instansi & Perusahaan")
+
 st.markdown("---")
 
 # ---------------------------------------------------
@@ -153,9 +163,9 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 7. MATRIKS TAMBAHAN: GOLONGAN & JENIS PEMILIK[cite: 3]
+    # 7. MATRIKS TAMBAHAN: GOLONGAN & JENIS PEMILIK
     # ---------------------------------------------------
-    st.subheader("📌 Matriks Detail: Golongan & Jenis Pemilik[cite: 3]")
+    st.subheader("📌 Matriks Detail: Golongan & Jenis Pemilik")
     
     col_m1, col_m2 = st.columns(2)
     
@@ -200,7 +210,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 9. TABEL DETAIL & DOWNLOAD (EXCEL & CSV)
+    # 9. TABEL DETAIL & TOMBOL DOWNLOAD (EXCEL & CSV)
     # ---------------------------------------------------
     st.subheader("📋 Tabel Detail Kendaraan")
     kolom_tampilan = [c for c in [
@@ -218,11 +228,11 @@ else:
         try:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name='Data_JR_Lhokseumawe')
+                df_filtered.to_excel(writer, index=False, sheet_name='Data_Instansi')
             st.download_button(
                 label="📊 Download File Excel (.xlsx)",
                 data=buffer.getvalue(),
-                file_name="Hasil_Filter_JR_Lhokseumawe.xlsx",
+                file_name="Hasil_Filter_Instansi.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         except Exception:
@@ -233,15 +243,6 @@ else:
         st.download_button(
             label="📄 Download File CSV (.csv)",
             data=csv_data,
-            file_name="Hasil_Filter_JR_Lhokseumawe.csv",
+            file_name="Hasil_Filter_Instansi.csv",
             mime="text/csv"
         )
-
-# ---------------------------------------------------
-# 10. COPYRIGHT FOOTER
-# ---------------------------------------------------
-st.markdown("---")
-st.markdown(
-    "<p style='text-align: center; color: gray;'>© 2026 PT Jasa Raharja — JR Lhokseumawe. All rights reserved.</p>",
-    unsafe_allow_html=True
-)
