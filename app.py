@@ -5,7 +5,7 @@ import glob
 import io
 
 # ---------------------------------------------------
-# 1. KONFIGURASI HALAMAN
+# 1. KONFIGURASI HALAMAN & TAMPILAN
 # ---------------------------------------------------
 st.set_page_config(
     page_title="Dashboard Analisis Tunggakan GASPOL",
@@ -13,28 +13,14 @@ st.set_page_config(
     layout="wide"
 )
 
-URL_LOGO_JR = "https://upload.wikimedia.org/wikipedia/commons/e/e0/Logo_Jasa_Raharja.png"
-FILE_LOGO_LOKAL = "logo_jasa_raharja.png"
-
-col_logo, col_title = st.columns([1, 8])
-with col_logo:
-    try:
-        st.image(FILE_LOGO_LOKAL, width=80)
-    except:
-        try:
-            st.image(URL_LOGO_JR, width=80)
-        except:
-            st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
-
-with col_title:
-    st.title("Dashboard Analisis Tunggakan Kendaraan & Instansi")
-
+# Judul Dashboard tanpa kolom Logo
+st.title("🚗 Dashboard Analisis GASPOLL ACEH")
 st.markdown("---")
 
 # ---------------------------------------------------
-# 2. PEMUATAN DATA HEMAT RAM
+# 2. PEMUATAN DATA AMAN (SMART LOAD & AUTO DELIMITER)
 # ---------------------------------------------------
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=600)
 def load_and_combine_data():
     file_list = glob.glob("*.csv")
     file_list = [
@@ -52,12 +38,8 @@ def load_and_combine_data():
         try:
             df_temp = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
             df_list.append(df_temp)
-        except Exception:
-            try:
-                df_temp = pd.read_csv(file, sep=";", on_bad_lines='skip', engine='python')
-                df_list.append(df_temp)
-            except Exception:
-                pass
+        except Exception as e:
+            st.warning(f"⚠️ Gagal membaca file {file}: {e}")
             
     if df_list:
         df_combined = pd.concat(df_list, ignore_index=True)
@@ -85,7 +67,7 @@ if df.empty:
 else:
     st.sidebar.header("🔍 Filter Data Utama")
     
-    # 1. Filter Cabang
+    # 1. Filter Cabang / Wilayah
     if 'nama_cabang' in df.columns:
         val_cabang = ["Semua Cabang / Wilayah"] + sorted([str(x) for x in df['nama_cabang'].dropna().unique()])
         selected_cabang = st.sidebar.selectbox("Pilih Cabang / Wilayah:", val_cabang)
@@ -139,6 +121,7 @@ else:
     else:
         selected_tunggakan = "Semua Kelompok"
 
+    # 8. Pencarian Cepat Teks
     cari_kata = st.sidebar.text_input("Cari Plat / Nama:")
 
     # ---------------------------------------------------
@@ -202,7 +185,7 @@ else:
     persen_belum_lunas = (jml_belum_lunas / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
 
     # ---------------------------------------------------
-    # 6. TAMPILAN KPI CARDS
+    # 6. TAMPILAN KPI CARDS UTAMA
     # ---------------------------------------------------
     st.subheader(f"📊 Ringkasan Indikator Utama ({selected_cabang})")
     
@@ -228,7 +211,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 7. MATRIKS DETAIL GOLONGAN & PEMILIK
+    # 7. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
     # ---------------------------------------------------
     st.subheader("📋 Matriks Detail: Golongan & Jenis Pemilik")
     
@@ -256,7 +239,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 8. VISUALISASI GRAFIK
+    # 8. VISUALISASI GRAFIK INTERAKTIF
     # ---------------------------------------------------
     st.subheader("📈 Visualisasi Grafik Analisis")
     
@@ -302,7 +285,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 9. TABEL DETAIL & DOWNLOAD
+    # 9. TABEL DETAIL KENDARAAN & TOMBOL DOWNLOAD
     # ---------------------------------------------------
     st.subheader("📋 Tabel Detail Kendaraan")
     st.info("💡 **Tips:** Klik judul kolom pada tabel untuk mengurutkan (sort) data secara instan.")
