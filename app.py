@@ -7,18 +7,34 @@ import io
 # ---------------------------------------------------
 # 1. KONFIGURASI HALAMAN & TAMPILAN
 # ---------------------------------------------------
-URL_LOGO_JR = "logo_jasa_raharja.png" 
-
 st.set_page_config(
     page_title="Dashboard Analisis Tunggakan GASPOL",
     page_icon="🚗",
     layout="wide"
 )
 
+URL_LOGO_JR = "https://upload.wikimedia.org/wikipedia/commons/e/e0/Logo_Jasa_Raharja.png"
+FILE_LOGO_LOKAL = "logo_jasa_raharja.png"
+
+col_logo, col_title = st.columns([1, 8])
+with col_logo:
+    try:
+        st.image(FILE_LOGO_LOKAL, width=80)
+    except:
+        try:
+            st.image(URL_LOGO_JR, width=80)
+        except:
+            st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
+
+with col_title:
+    st.title("Dashboard Analisis Tunggakan Kendaraan & Instansi")
+
+st.markdown("---")
+
 # ---------------------------------------------------
-# 2. PEMUATAN DATA AMAN (SMART LOAD & AUTO DELIMITER)
+# 2. PEMUATAN DATA OPTIMAL & IRIT MEMORI (RAM SAFE)
 # ---------------------------------------------------
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, show_spinner=False)
 def load_and_combine_data():
     file_list = glob.glob("*.csv")
     file_list = [
@@ -34,14 +50,25 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            df_temp = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
+            # Membaca dengan engine C yang irit memori
+            df_temp = pd.read_csv(
+                file, 
+                sep=None, 
+                engine='python', 
+                on_bad_lines='skip'
+            )
             df_list.append(df_temp)
-        except Exception as e:
-            st.warning(f"⚠️ Gagal membaca file {file}: {e}")
+        except Exception:
+            try:
+                df_temp = pd.read_csv(file, sep=";", on_bad_lines='skip', engine='python')
+                df_list.append(df_temp)
+            except Exception as e:
+                st.warning(f"⚠️ Gagal membaca file {file}: {e}")
             
     if df_list:
         df_combined = pd.concat(df_list, ignore_index=True)
         
+        # Standarisasi Kolom
         rename_dict = {}
         if 'samsat_asal_nama' in df_combined.columns and 'nama_samsat' not in df_combined.columns:
             rename_dict['samsat_asal_nama'] = 'nama_samsat'
@@ -51,6 +78,10 @@ def load_and_combine_data():
         if rename_dict:
             df_combined = df_combined.rename(columns=rename_dict)
             
+        # Konversi tipe data agar hemat RAM
+        for col in df_combined.select_dtypes(include=['object']).columns:
+            df_combined[col] = df_combined[col].astype('category')
+            
         return df_combined
     else:
         return pd.DataFrame()
@@ -58,28 +89,14 @@ def load_and_combine_data():
 df = load_and_combine_data()
 
 # ---------------------------------------------------
-# 3. HEADER & LOGO DASHBOARD
-# ---------------------------------------------------
-col_logo, col_title = st.columns([1, 8])
-with col_logo:
-    try:
-        st.image(URL_LOGO_JR, width=80)
-    except:
-        st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
-with col_title:
-    st.title("Dashboard Analisis Tunggakan Kendaraan & Instansi")
-
-st.markdown("---")
-
-# ---------------------------------------------------
-# 4. PANEL FILTER SIDEBAR
+# 3. PANEL FILTER SIDEBAR
 # ---------------------------------------------------
 if df.empty:
     st.error("⚠️ File CSV data tidak ditemukan atau gagal dibaca. Pastikan file CSV berada di folder yang sama dengan app.py.")
 else:
     st.sidebar.header("🔍 Filter Data Utama")
     
-    # 1. Filter Cabang / Wilayah
+    # 1. Filter Cabang
     if 'nama_cabang' in df.columns:
         val_cabang = ["Semua Cabang / Wilayah"] + sorted([str(x) for x in df['nama_cabang'].dropna().unique()])
         selected_cabang = st.sidebar.selectbox("Pilih Cabang / Wilayah:", val_cabang)
@@ -133,11 +150,10 @@ else:
     else:
         selected_tunggakan = "Semua Kelompok"
 
-    # 8. Pencarian Cepat Teks
     cari_kata = st.sidebar.text_input("Cari Plat / Nama:")
 
     # ---------------------------------------------------
-    # 5. TERAPKAN FILTER KE DATASET
+    # 4. TERAPKAN FILTER KE DATASET
     # ---------------------------------------------------
     df_filtered = df.copy()
     
@@ -161,7 +177,7 @@ else:
         df_filtered = df_filtered[cond_plat | cond_nama]
 
     # ---------------------------------------------------
-    # 6. PERHITUNGAN MATRIKS (COVERAGE & CONVERSION REVISI)
+    # 5. PERHITUNGAN MATRIKS PERFORMANCE
     # ---------------------------------------------------
     total_kendaraan = len(df_filtered)
 
@@ -181,10 +197,10 @@ else:
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
         jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
         
-        # 1. Coverage Rate = Total Kendaraan Sudah TL / Total Kendaraan
+        # Coverage Rate = Total Sudah TL / Total Kendaraan
         coverage_rate = (total_sdh_tl / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
 
-        # 2. Conversion Rate (REVISI BARU) = Lunas Sudah TL / Total Kendaraan Sudah TL
+        # Conversion Rate = Lunas Sudah TL / Total Sudah TL
         conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
             
         efektivitas_tl = conversion_rate
@@ -201,7 +217,7 @@ else:
     persen_belum_lunas = (jml_belum_lunas / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
 
     # ---------------------------------------------------
-    # 7. TAMPILAN KPI CARDS UTAMA
+    # 6. TAMPILAN KPI CARDS
     # ---------------------------------------------------
     st.subheader(f"📊 Ringkasan Indikator Utama ({selected_cabang})")
     
@@ -227,7 +243,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 8. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
+    # 7. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
     # ---------------------------------------------------
     st.subheader("📋 Matriks Detail: Golongan & Jenis Pemilik")
     
@@ -255,7 +271,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 9. VISUALISASI GRAFIK INTERAKTIF
+    # 8. VISUALISASI GRAFIK
     # ---------------------------------------------------
     st.subheader("📈 Visualisasi Grafik Analisis")
     
@@ -301,7 +317,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 10. TABEL DETAIL KENDARAAN & TOMBOL DOWNLOAD
+    # 9. TABEL DETAIL & DOWNLOAD
     # ---------------------------------------------------
     st.subheader("📋 Tabel Detail Kendaraan")
     st.info("💡 **Tips:** Klik judul kolom pada tabel untuk mengurutkan (sort) data secara instan.")
@@ -341,7 +357,7 @@ else:
         )
 
 # ---------------------------------------------------
-# 11. COPYRIGHT FOOTER
+# 10. COPYRIGHT FOOTER
 # ---------------------------------------------------
 st.markdown("---")
 st.markdown(
