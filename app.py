@@ -27,7 +27,7 @@ with col_logo:
             st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
 
 with col_title:
-    st.title("Dashboard Analisis Tunggakan Kendaraan & Instansi")
+    st.title("Dashboard Analisis GASPOLL ACEH")
 
 st.markdown("---")
 
