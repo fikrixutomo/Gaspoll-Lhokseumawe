@@ -5,7 +5,7 @@ import glob
 import io
 
 # ---------------------------------------------------
-# 1. KONFIGURASI HALAMAN & TAMPILAN
+# 1. KONFIGURASI HALAMAN
 # ---------------------------------------------------
 st.set_page_config(
     page_title="Dashboard Analisis Tunggakan GASPOL",
@@ -27,12 +27,12 @@ with col_logo:
             st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
 
 with col_title:
-    st.title("Dashboard Analisis GASPOLL ACEH")
+    st.title("Dashboard Analisis Tunggakan Kendaraan & Instansi")
 
 st.markdown("---")
 
 # ---------------------------------------------------
-# 2. PEMUATAN DATA OPTIMAL & IRIT MEMORI (RAM SAFE)
+# 2. PEMUATAN DATA HEMAT RAM
 # ---------------------------------------------------
 @st.cache_data(ttl=600, show_spinner=False)
 def load_and_combine_data():
@@ -50,25 +50,18 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            # Membaca dengan engine C yang irit memori
-            df_temp = pd.read_csv(
-                file, 
-                sep=None, 
-                engine='python', 
-                on_bad_lines='skip'
-            )
+            df_temp = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
             df_list.append(df_temp)
         except Exception:
             try:
                 df_temp = pd.read_csv(file, sep=";", on_bad_lines='skip', engine='python')
                 df_list.append(df_temp)
-            except Exception as e:
-                st.warning(f"⚠️ Gagal membaca file {file}: {e}")
+            except Exception:
+                pass
             
     if df_list:
         df_combined = pd.concat(df_list, ignore_index=True)
         
-        # Standarisasi Kolom
         rename_dict = {}
         if 'samsat_asal_nama' in df_combined.columns and 'nama_samsat' not in df_combined.columns:
             rename_dict['samsat_asal_nama'] = 'nama_samsat'
@@ -77,10 +70,6 @@ def load_and_combine_data():
             
         if rename_dict:
             df_combined = df_combined.rename(columns=rename_dict)
-            
-        # Konversi tipe data agar hemat RAM
-        for col in df_combined.select_dtypes(include=['object']).columns:
-            df_combined[col] = df_combined[col].astype('category')
             
         return df_combined
     else:
@@ -177,7 +166,7 @@ else:
         df_filtered = df_filtered[cond_plat | cond_nama]
 
     # ---------------------------------------------------
-    # 5. PERHITUNGAN MATRIKS PERFORMANCE
+    # 5. PERHITUNGAN MATRIKS
     # ---------------------------------------------------
     total_kendaraan = len(df_filtered)
 
@@ -197,12 +186,8 @@ else:
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
         jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
         
-        # Coverage Rate = Total Sudah TL / Total Kendaraan
         coverage_rate = (total_sdh_tl / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
-
-        # Conversion Rate = Lunas Sudah TL / Total Sudah TL
         conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
-            
         efektivitas_tl = conversion_rate
         
         jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
@@ -243,7 +228,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 7. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
+    # 7. MATRIKS DETAIL GOLONGAN & PEMILIK
     # ---------------------------------------------------
     st.subheader("📋 Matriks Detail: Golongan & Jenis Pemilik")
     
@@ -255,7 +240,7 @@ else:
         if not df_filtered.empty and gol_col:
             df_gol = df_filtered[gol_col].value_counts().reset_index()
             df_gol.columns = ['Golongan', 'Jumlah Unit']
-            st.dataframe(df_gol, use_container_width=True, hide_index=True)
+            st.dataframe(df_gol, width="stretch", hide_index=True)
         else:
             st.info("Data golongan tidak tersedia.")
             
@@ -264,7 +249,7 @@ else:
         if not df_filtered.empty and 'pemilik_jenis' in df_filtered.columns:
             df_pemilik = df_filtered['pemilik_jenis'].value_counts().reset_index()
             df_pemilik.columns = ['Jenis Pemilik', 'Jumlah Unit']
-            st.dataframe(df_pemilik, use_container_width=True, hide_index=True)
+            st.dataframe(df_pemilik, width="stretch", hide_index=True)
         else:
             st.info("Data jenis pemilik tidak tersedia.")
 
@@ -291,7 +276,7 @@ else:
                 color_discrete_sequence=px.colors.qualitative.Set2
             )
             fig_grouped.update_traces(textposition='outside')
-            st.plotly_chart(fig_grouped, use_container_width=True)
+            st.plotly_chart(fig_grouped, width="stretch")
         else:
             st.info("Data tidak mencukupi untuk bagan ini.")
 
@@ -310,7 +295,7 @@ else:
                 text='Jumlah'
             )
             fig_samsat.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_samsat, use_container_width=True)
+            st.plotly_chart(fig_samsat, width="stretch")
         else:
             st.info("Kolom nama_samsat tidak ditemukan.")
 
@@ -328,7 +313,7 @@ else:
         'kelompok_selisih_hari_tunggakan', 'status_tindak_lanjut', 'status_bayar', 'prioritas'
     ] if c in df_filtered.columns]
     
-    st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
+    st.dataframe(df_filtered[kolom_tampilan], width="stretch")
     
     st.markdown("### 📥 Download Hasil Filter Data")
     dl1, dl2 = st.columns(2)
