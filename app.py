@@ -7,15 +7,13 @@ import io
 # ---------------------------------------------------
 # 1. KONFIGURASI HALAMAN & TAMPILAN
 # ---------------------------------------------------
+URL_LOGO_JR = "logo_jasa_raharja.png" 
+
 st.set_page_config(
-    page_title="Dashboard Analisis Tunggakan GASPOL",
+    page_title="Dashboard Analisis Tunggakan GASPOLL",
     page_icon="🚗",
     layout="wide"
 )
-
-# Judul Dashboard tanpa kolom Logo
-st.title("🚗 Dashboard Analisis GASPOLL ACEH")
-st.markdown("---")
 
 # ---------------------------------------------------
 # 2. PEMUATAN DATA AMAN (SMART LOAD & AUTO DELIMITER)
@@ -36,6 +34,7 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
+            # Mencoba membaca dengan pemisah titik koma (;) atau koma (,) secara otomatis
             df_temp = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
             df_list.append(df_temp)
         except Exception as e:
@@ -60,7 +59,21 @@ def load_and_combine_data():
 df = load_and_combine_data()
 
 # ---------------------------------------------------
-# 3. PANEL FILTER SIDEBAR
+# 3. HEADER & LOGO DASHBOARD
+# ---------------------------------------------------
+col_logo, col_title = st.columns([1, 8])
+with col_logo:
+    try:
+        st.image(URL_LOGO_JR, width=80)
+    except:
+        st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
+with col_title:
+    st.title("Dashboard Analisis GASPOLL")
+
+st.markdown("---")
+
+# ---------------------------------------------------
+# 4. PANEL FILTER SIDEBAR
 # ---------------------------------------------------
 if df.empty:
     st.error("⚠️ File CSV data tidak ditemukan atau gagal dibaca. Pastikan file CSV berada di folder yang sama dengan app.py.")
@@ -125,7 +138,7 @@ else:
     cari_kata = st.sidebar.text_input("Cari Plat / Nama:")
 
     # ---------------------------------------------------
-    # 4. TERAPKAN FILTER KE DATASET
+    # 5. TERAPKAN FILTER KE DATASET
     # ---------------------------------------------------
     df_filtered = df.copy()
     
@@ -149,7 +162,7 @@ else:
         df_filtered = df_filtered[cond_plat | cond_nama]
 
     # ---------------------------------------------------
-    # 5. PERHITUNGAN MATRIKS
+    # 6. PERHITUNGAN MATRIKS (COVERAGE & CONVERSION)
     # ---------------------------------------------------
     total_kendaraan = len(df_filtered)
 
@@ -169,8 +182,12 @@ else:
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
         jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
         
+        # 1. Coverage Rate
         coverage_rate = (total_sdh_tl / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
+
+        # 2. Conversion Rate
         conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
+            
         efektivitas_tl = conversion_rate
         
         jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
@@ -185,7 +202,7 @@ else:
     persen_belum_lunas = (jml_belum_lunas / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
 
     # ---------------------------------------------------
-    # 6. TAMPILAN KPI CARDS UTAMA
+    # 7. TAMPILAN KPI CARDS UTAMA
     # ---------------------------------------------------
     st.subheader(f"📊 Ringkasan Indikator Utama ({selected_cabang})")
     
@@ -211,7 +228,7 @@ else:
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 7. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
+    # 8. MATRIKS DETAIL: GOLONGAN & JENIS PEMILIK
     # ---------------------------------------------------
     st.subheader("📋 Matriks Detail: Golongan & Jenis Pemilik")
     
@@ -223,7 +240,7 @@ else:
         if not df_filtered.empty and gol_col:
             df_gol = df_filtered[gol_col].value_counts().reset_index()
             df_gol.columns = ['Golongan', 'Jumlah Unit']
-            st.dataframe(df_gol, width="stretch", hide_index=True)
+            st.dataframe(df_gol, use_container_width=True, hide_index=True)
         else:
             st.info("Data golongan tidak tersedia.")
             
@@ -232,14 +249,14 @@ else:
         if not df_filtered.empty and 'pemilik_jenis' in df_filtered.columns:
             df_pemilik = df_filtered['pemilik_jenis'].value_counts().reset_index()
             df_pemilik.columns = ['Jenis Pemilik', 'Jumlah Unit']
-            st.dataframe(df_pemilik, width="stretch", hide_index=True)
+            st.dataframe(df_pemilik, use_container_width=True, hide_index=True)
         else:
             st.info("Data jenis pemilik tidak tersedia.")
 
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 8. VISUALISASI GRAFIK INTERAKTIF
+    # 9. VISUALISASI GRAFIK INTERAKTIF
     # ---------------------------------------------------
     st.subheader("📈 Visualisasi Grafik Analisis")
     
@@ -259,7 +276,7 @@ else:
                 color_discrete_sequence=px.colors.qualitative.Set2
             )
             fig_grouped.update_traces(textposition='outside')
-            st.plotly_chart(fig_grouped, width="stretch")
+            st.plotly_chart(fig_grouped, use_container_width=True)
         else:
             st.info("Data tidak mencukupi untuk bagan ini.")
 
@@ -278,14 +295,14 @@ else:
                 text='Jumlah'
             )
             fig_samsat.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_samsat, width="stretch")
+            st.plotly_chart(fig_samsat, use_container_width=True)
         else:
             st.info("Kolom nama_samsat tidak ditemukan.")
 
     st.markdown("---")
 
     # ---------------------------------------------------
-    # 9. TABEL DETAIL KENDARAAN & TOMBOL DOWNLOAD
+    # 10. TABEL DETAIL KENDARAAN & TOMBOL DOWNLOAD
     # ---------------------------------------------------
     st.subheader("📋 Tabel Detail Kendaraan")
     st.info("💡 **Tips:** Klik judul kolom pada tabel untuk mengurutkan (sort) data secara instan.")
@@ -296,7 +313,7 @@ else:
         'kelompok_selisih_hari_tunggakan', 'status_tindak_lanjut', 'status_bayar', 'prioritas'
     ] if c in df_filtered.columns]
     
-    st.dataframe(df_filtered[kolom_tampilan], width="stretch")
+    st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
     
     st.markdown("### 📥 Download Hasil Filter Data")
     dl1, dl2 = st.columns(2)
@@ -325,7 +342,7 @@ else:
         )
 
 # ---------------------------------------------------
-# 10. COPYRIGHT FOOTER
+# 11. COPYRIGHT FOOTER
 # ---------------------------------------------------
 st.markdown("---")
 st.markdown(
