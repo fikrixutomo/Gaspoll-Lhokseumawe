@@ -229,7 +229,7 @@ else:
         if not df_filtered.empty and gol_col:
             df_gol = df_filtered[gol_col].value_counts().reset_index()
             df_gol.columns = ['Golongan', 'Jumlah Unit']
-            st.dataframe(df_gol, width="100%", hide_index=True)
+            st.dataframe(df_gol, use_container_width=True, hide_index=True)
         else:
             st.info("Data golongan tidak tersedia.")
             
@@ -238,7 +238,7 @@ else:
         if not df_filtered.empty and 'pemilik_jenis' in df_filtered.columns:
             df_pemilik = df_filtered['pemilik_jenis'].value_counts().reset_index()
             df_pemilik.columns = ['Jenis Pemilik', 'Jumlah Unit']
-            st.dataframe(df_pemilik, width="100%", hide_index=True)
+            st.dataframe(df_pemilik, use_container_width=True, hide_index=True)
         else:
             st.info("Data jenis pemilik tidak tersedia.")
 
@@ -265,7 +265,7 @@ else:
                 color_discrete_sequence=px.colors.qualitative.Set2
             )
             fig_grouped.update_traces(textposition='outside')
-            st.plotly_chart(fig_grouped, width="100%")
+            st.plotly_chart(fig_grouped, use_container_width=True)
         else:
             st.info("Data tidak mencukupi untuk bagan ini.")
 
@@ -284,7 +284,7 @@ else:
                 text='Jumlah'
             )
             fig_samsat.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_samsat, width="100%")
+            st.plotly_chart(fig_samsat, use_container_width=True)
         else:
             st.info("Kolom nama_samsat tidak ditemukan.")
 
@@ -302,7 +302,7 @@ else:
         'kelompok_selisih_hari_tunggakan', 'status_tindak_lanjut', 'status_bayar', 'prioritas'
     ] if c in df_filtered.columns]
     
-    st.dataframe(df_filtered[kolom_tampilan], width="100%")
+    st.dataframe(df_filtered[kolom_tampilan], use_container_width=True)
     
     st.markdown("### 📥 Download Hasil Filter Data")
     dl1, dl2 = st.columns(2)
