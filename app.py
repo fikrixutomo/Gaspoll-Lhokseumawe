@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------
-# 2. PEMUATAN DATA AMAN (SMART LOAD & AUTO DELIMITER)
+# 2. PEMUATAN DATA AMAN & PINTAR (SMART LOAD & AUTO DELIMITER)
 # ---------------------------------------------------
 @st.cache_data(ttl=600)
 def load_and_combine_data():
@@ -34,7 +34,7 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            # Mencoba membaca dengan pemisah titik koma (;) atau koma (,) secara otomatis
+            # Menggunakan sep=None dan engine='python' agar otomatis mendeteksi koma atau titik koma
             df_temp = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
             df_list.append(df_temp)
         except Exception as e:
@@ -43,6 +43,7 @@ def load_and_combine_data():
     if df_list:
         df_combined = pd.concat(df_list, ignore_index=True)
         
+        # --- STANDARISASI / RENAME KOLOM OTOMATIS ---
         rename_dict = {}
         if 'samsat_asal_nama' in df_combined.columns and 'nama_samsat' not in df_combined.columns:
             rename_dict['samsat_asal_nama'] = 'nama_samsat'
@@ -68,15 +69,15 @@ with col_logo:
     except:
         st.markdown("<h1>🚗</h1>", unsafe_allow_html=True)
 with col_title:
-    st.title("Dashboard Analisis GASPOLL")
+    st.title("Dashboard Analisis Tunggakan GASPOLL")
 
 st.markdown("---")
 
 # ---------------------------------------------------
-# 4. PANEL FILTER SIDEBAR
+# 4. PANEL FILTER SIDEBAR LENGKAP
 # ---------------------------------------------------
 if df.empty:
-    st.error("⚠️ File CSV data tidak ditemukan atau gagal dibaca. Pastikan file CSV berada di folder yang sama dengan app.py.")
+    st.error("⚠️ File CSV data tidak ditemukan atau gagal dibaca. Pastikan file CSV berada di folder yang sama dengan app.py dan hapus file CSV lama yang kosong.")
 else:
     st.sidebar.header("🔍 Filter Data Utama")
     
@@ -87,7 +88,7 @@ else:
     else:
         selected_cabang = "Semua Cabang / Wilayah"
 
-    # 2. Filter Samsat
+    # 2. Filter Samsat (Dinamis Berdasarkan Cabang)
     if 'nama_samsat' in df.columns:
         if selected_cabang != "Semua Cabang / Wilayah" and 'nama_cabang' in df.columns:
             df_sub = df[df['nama_cabang'] == selected_cabang]
@@ -182,12 +183,8 @@ else:
         total_sdh_tl = len(df_filtered[cond_sdh_tl])
         jml_lunas_sdh_tl = len(df_filtered[cond_lunas & cond_sdh_tl])
         
-        # 1. Coverage Rate
         coverage_rate = (total_sdh_tl / total_kendaraan * 100) if total_kendaraan > 0 else 0.0
-
-        # 2. Conversion Rate
         conversion_rate = (jml_lunas_sdh_tl / total_sdh_tl * 100) if total_sdh_tl > 0 else 0.0
-            
         efektivitas_tl = conversion_rate
         
         jml_lunas_blm_tl = len(df_filtered[cond_lunas & cond_blm_tl])
