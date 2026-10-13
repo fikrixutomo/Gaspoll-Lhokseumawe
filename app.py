@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------
-# 2. PEMUATAN DATA AMAN & HEMAT MEMORI (OPTIMASI RAM)
+# 2. PEMUATAN DATA AMAN & HEMAT MEMORI
 # ---------------------------------------------------
 @st.cache_data(ttl=600)
 def load_and_combine_data():
@@ -29,7 +29,6 @@ def load_and_combine_data():
     if not file_list:
         return pd.DataFrame()
         
-    # HANYA muat kolom yang dipanggil di dalam kode dashboard Anda
     kolom_penting = [
         'no_polisi', 'nama_pemilik_terakhir', 'nama_instansi', 'pemilik_jenis', 
         'nama_samsat', 'samsat_asal_nama', 'nama_cabang', 
@@ -41,22 +40,19 @@ def load_and_combine_data():
     df_list = []
     for file in file_list:
         try:
-            # Cek pemisah (delimiter) dan nama kolom dengan membaca 0 baris data
-            temp_cols = pd.read_csv(file, sep=";", nrows=0, on_bad_lines='skip', engine='c').columns
+            # Cek pemisah (delimiter) dengan engine python agar aman
+            temp_cols = pd.read_csv(file, sep=";", nrows=0, on_bad_lines='skip', engine='python').columns
             pemisah = ";" if len(temp_cols) > 1 else ","
-            temp_cols = pd.read_csv(file, sep=pemisah, nrows=0, on_bad_lines='skip', engine='c').columns
+            temp_cols = pd.read_csv(file, sep=pemisah, nrows=0, on_bad_lines='skip', engine='python').columns
             
-            # Cocokkan kolom yang dibutuhkan dengan kolom yang tersedia di file CSV
-            kolom_terpakai = [col for col in kolom_penting if col in temp_cols]
+            # Cocokkan kolom yang dibutuhkan
+            kolom_terpakai = [col for col in temp_cols if col in kolom_penting]
             
-            # Baca data HANYA kolom yang dipakai
-            df_temp = pd.read_csv(file, sep=pemisah, usecols=kolom_terpakai, on_bad_lines='skip', engine='c')
-            
-            # Ubah tipe data string menjadi kategori untuk menghemat RAM secara drastis
-            for col in df_temp.columns:
-                if df_temp[col].dtype == 'object' and col not in ['no_polisi', 'nama_pemilik_terakhir', 'nama_instansi', 'nomor_hp']:
-                    df_temp[col] = df_temp[col].astype('category')
-                    
+            if kolom_terpakai:
+                df_temp = pd.read_csv(file, sep=pemisah, usecols=kolom_terpakai, on_bad_lines='skip', low_memory=False)
+            else:
+                df_temp = pd.read_csv(file, sep=pemisah, on_bad_lines='skip', low_memory=False)
+                
             df_list.append(df_temp)
         except Exception as e:
             st.warning(f"⚠️ Gagal membaca file {file}: {e}")
@@ -173,10 +169,10 @@ else:
     if selected_tl != "Semua Status TL" and 'status_tindak_lanjut' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['status_tindak_lanjut'].astype(str) == selected_tl]
     if selected_tunggakan != "Semua Kelompok" and 'kelompok_selisih_hari_tunggakan' in df_filtered.columns:
-        df_filtered = df_filtered[df_filtered['kelompok_selisih_hari_tunggakan'] == selected_tunggakan]
+        df_filtered = df_filtered[df_filtered['kelompok_selisih_hari_tunggakan'].astype(str) == selected_tunggakan]
     if cari_kata:
-        cond_plat = df_filtered['no_polisi'].astype(str).str.contains(cari_kata, case=False, na=False) if 'no_polisi' in df_filtered.columns else False
-        cond_nama = df_filtered[col_perusahaan].astype(str).str.contains(cari_kata, case=False, na=False) if col_perusahaan else False
+        cond_plat = df_filtered['no_polisi'].astype(str).str.contains(cari_kata, case=False, na=False) if 'no_polisi' in df_filtered.columns else pd.Series(False, index=df_filtered.index)
+        cond_nama = df_filtered[col_perusahaan].astype(str).str.contains(cari_kata, case=False, na=False) if col_perusahaan else pd.Series(False, index=df_filtered.index)
         df_filtered = df_filtered[cond_plat | cond_nama]
 
     # ---------------------------------------------------
