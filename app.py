@@ -9,7 +9,7 @@ import io
 # ---------------------------------------------------
 st.set_page_config(
     page_title="Dashboard Analisis Tunggakan GASPOLL",
-    page_icon="🚗",
+    page_icon="LOGO_JASA_RAHARJA_2024_(cropped).png",
     layout="wide"
 )
 
